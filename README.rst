@@ -14,7 +14,12 @@ A PlatformIO-compatible build environment for the excellent `BresserWeatherSenso
 Usage
 *****
 
-Baseline::
+Acquire sources::
+
+    git clone https://github.com/daq-tools/bresser-to-mqtt
+    cd bresser-to-mqtt
+
+Build firmware image::
 
     python3 -m venv .venv
     source .venv/bin/activate
