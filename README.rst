@@ -18,7 +18,7 @@ Baseline::
 
     python3 -m venv .venv
     source .venv/bin/activate
-    pip install platformio
+    pip install --upgrade --requirement=requirements.txt
     pio run
 
 More targets::
