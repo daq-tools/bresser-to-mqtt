@@ -1,0 +1,42 @@
+name: PlatformIO CI
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+  # Allow job to be triggered manually.
+  workflow_dispatch:
+
+# Cancel in-progress jobs when pushing to the same branch.
+concurrency:
+  cancel-in-progress: true
+  group: ${{ github.workflow }}-${{ github.ref }}
+
+jobs:
+  build:
+
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Acquire sources
+        uses: actions/checkout@v3
+
+      - name: Cache PlatformIO
+        uses: actions/cache@v3
+        with:
+          path: ~/.pio
+          key: ${{ runner.os }}-${{ hashFiles('**/lockfiles') }}
+
+      - name: Setup Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+
+      - name: Install PlatformIO
+        run: |
+          pip install --upgrade --requirement requirements.txt
+
+      - name: Run build
+        run: pio run
