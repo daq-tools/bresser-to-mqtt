@@ -408,19 +408,17 @@ void messageReceived(String &topic, String &payload)
 */
 void publishWeatherdata(bool complete)
 {
-    char mqtt_payload[PAYLOAD_SIZE];  // sensor data
-    char mqtt_payload2[PAYLOAD_SIZE]; // calculated extra data
-    char mqtt_topic[TOPIC_SIZE+31];   // add space for ID/name
-
-    // ArduinoJson does not allow to set number of decimals for floating point data -
-    // neither does MQTT Dashboard...
-    // Therefore the JSON string is created manually. 
-
+    // Example:
+    // {"ch":0,"battery_ok":true,"humidity":44,"wind_gust":1.2,"wind_avg":1.2,"wind_dir":150,"rain":146}
     for (int i=0; i<NUM_SENSORS; i++) {
-      // Reset string buffers
-      mqtt_payload[0]  = '\0';
-      mqtt_payload2[0] = '\0';
-      
+
+      char mqtt_payload[PAYLOAD_SIZE];  // sensor data
+      char mqtt_payload2[PAYLOAD_SIZE]; // calculated extra data
+      char mqtt_topic[TOPIC_SIZE+31];   // add space for ID/name
+
+      DynamicJsonDocument payload(PAYLOAD_SIZE);
+      DynamicJsonDocument payload2(PAYLOAD_SIZE);
+
       if (!weatherSensor.sensor[i].valid)
           continue;
 
@@ -430,59 +428,48 @@ void publishWeatherdata(bool complete)
           rainGauge.update(timeinfo, weatherSensor.sensor[i].rain_mm);
       }
       
-      // Example:
-      // {"ch":0,"battery_ok":true,"humidity":44,"wind_gust":1.2,"wind_avg":1.2,"wind_dir":150,"rain":146}
-      sprintf(&mqtt_payload[strlen(mqtt_payload)], "{");
-      sprintf(&mqtt_payload2[strlen(mqtt_payload2)], "{");
-      sprintf(&mqtt_payload[strlen(mqtt_payload)], "\"id\":%u", weatherSensor.sensor[i].sensor_id);
+      payload["id"] = weatherSensor.sensor[i].sensor_id;
       #ifdef BRESSER_6_IN_1
-          sprintf(&mqtt_payload[strlen(mqtt_payload)], ",\"ch\":%d", weatherSensor.sensor[i].chan);
+          payload["ch"] = weatherSensor.sensor[i].chan;
       #endif
-      sprintf(&mqtt_payload[strlen(mqtt_payload)], ",\"battery_ok\":%d", weatherSensor.sensor[i].battery_ok ? 1 : 0);
+      payload["battery_ok"] = weatherSensor.sensor[i].battery_ok ? 1 : 0;
       if (weatherSensor.sensor[i].temp_ok || complete) {
-          sprintf(&mqtt_payload[strlen(mqtt_payload)], ",\"temp_c\":%.1f", weatherSensor.sensor[i].temp_c);
+          payload["temp_c"] = serialized(String(weatherSensor.sensor[i].temp_c, 1));
       }
       if (weatherSensor.sensor[i].humidity_ok || complete) {
-          sprintf(&mqtt_payload[strlen(mqtt_payload)], ",\"humidity\":%d", weatherSensor.sensor[i].humidity);
+          payload["humidity"] = serialized(String(weatherSensor.sensor[i].humidity, 1));
       }
       if (weatherSensor.sensor[i].wind_ok || complete) {
-          sprintf(&mqtt_payload[strlen(mqtt_payload)], ",\"wind_gust\":%.1f", weatherSensor.sensor[i].wind_gust_meter_sec);
-          sprintf(&mqtt_payload[strlen(mqtt_payload)], ",\"wind_avg\":%.1f", weatherSensor.sensor[i].wind_avg_meter_sec);
-          sprintf(&mqtt_payload[strlen(mqtt_payload)], ",\"wind_dir\":%.1f", weatherSensor.sensor[i].wind_direction_deg);
+          payload["wind_gust"] = serialized(String(weatherSensor.sensor[i].wind_gust_meter_sec, 1));
+          payload["wind_avg"] = serialized(String(weatherSensor.sensor[i].wind_avg_meter_sec, 1));
+          payload["wind_dir"] = serialized(String(weatherSensor.sensor[i].wind_direction_deg, 1));
       }
       if (weatherSensor.sensor[i].wind_ok) {
           char buf[4];
-          sprintf(&mqtt_payload2[strlen(mqtt_payload2)], "\"wind_dir_txt\":\"%s\"", 
-            winddir_flt_to_str(weatherSensor.sensor[i].wind_direction_deg, buf));
-          sprintf(&mqtt_payload2[strlen(mqtt_payload2)], ",\"wind_gust_bft\":%d", 
-            windspeed_ms_to_bft(weatherSensor.sensor[i].wind_gust_meter_sec));
-          sprintf(&mqtt_payload2[strlen(mqtt_payload2)], ",\"wind_avg_bft\":%d", 
-            windspeed_ms_to_bft(weatherSensor.sensor[i].wind_avg_meter_sec));          
+          payload2["wind_dir_txt"] = winddir_flt_to_str(weatherSensor.sensor[i].wind_direction_deg, buf);
+          payload2["wind_gust_bft"] = windspeed_ms_to_bft(weatherSensor.sensor[i].wind_gust_meter_sec);
+          payload2["wind_avg_bft"] = windspeed_ms_to_bft(weatherSensor.sensor[i].wind_avg_meter_sec);
       }
       if ((weatherSensor.sensor[i].temp_ok) && (weatherSensor.sensor[i].humidity_ok)) {
-        sprintf(&mqtt_payload2[strlen(mqtt_payload2)], ",\"dewpoint_c\":%.1f", 
-          calcdewpoint(weatherSensor.sensor[i].temp_c, weatherSensor.sensor[i].humidity));
-        
+        payload2["dewpoint_c"] = serialized(String(calcdewpoint(weatherSensor.sensor[i].temp_c, weatherSensor.sensor[i].humidity), 1));
+
         if (weatherSensor.sensor[i].wind_ok) {
-          sprintf(&mqtt_payload2[strlen(mqtt_payload2)], ",\"perceived_temp_c\":%.1f", 
-            perceived_temperature(weatherSensor.sensor[i].temp_c, weatherSensor.sensor[i].wind_avg_meter_sec, weatherSensor.sensor[i].humidity)); 
+          payload2["perceived_temp_c"] = serialized(String(perceived_temperature(weatherSensor.sensor[i].temp_c, weatherSensor.sensor[i].wind_avg_meter_sec, weatherSensor.sensor[i].humidity), 1));
         }
       }
       if (weatherSensor.sensor[i].uv_ok || complete) {
-          sprintf(&mqtt_payload[strlen(mqtt_payload)], ",\"uv\":%.1f", weatherSensor.sensor[i].uv);
+          payload["uv"] = serialized(String(weatherSensor.sensor[i].uv, 1));
       }
       if (weatherSensor.sensor[i].rain_ok || complete) {
-          sprintf(&mqtt_payload[strlen(mqtt_payload)], ",\"rain\":%.1f", weatherSensor.sensor[i].rain_mm);
-          sprintf(&mqtt_payload[strlen(mqtt_payload)], ",\"rain_d\":%.1f", rainGauge.currentDay());
-          sprintf(&mqtt_payload[strlen(mqtt_payload)], ",\"rain_w\":%.1f", rainGauge.currentWeek());
-          sprintf(&mqtt_payload[strlen(mqtt_payload)], ",\"rain_m\":%.1f", rainGauge.currentMonth());
+          payload["rain"] = serialized(String(weatherSensor.sensor[i].rain_mm, 1));
+          payload["rain_d"] = serialized(String(rainGauge.currentDay(), 1));
+          payload["rain_w"] = serialized(String(rainGauge.currentWeek(), 1));
+          payload["rain_m"] = serialized(String(rainGauge.currentMonth(), 1));
       }
       if (weatherSensor.sensor[i].moisture_ok || complete) {
-          sprintf(&mqtt_payload[strlen(mqtt_payload)], ",\"moisture\":%d", weatherSensor.sensor[i].moisture);
+          payload["moisture"] = serialized(String(weatherSensor.sensor[i].moisture, 1));
       }
-      sprintf(&mqtt_payload[strlen(mqtt_payload)], "}");
-      sprintf(&mqtt_payload2[strlen(mqtt_payload2)], "}");
-      
+
       // Try to map sensor ID to name to make MQTT topic explanatory
       for (int n=0; n<NUM_SENSORS; n++) {
         if (sensor_map[n].id == weatherSensor.sensor[i].sensor_id) {
@@ -493,7 +480,10 @@ void publishWeatherdata(bool complete)
           snprintf(mqtt_topic, TOPIC_SIZE+31, "%s/%8X", mqttPubData, weatherSensor.sensor[i].sensor_id);
         }
       }
-      
+
+      serializeJson(payload, mqtt_payload);
+      serializeJson(payload2, mqtt_payload2);
+
       // sensor data
       Serial.printf("%s: %s\n", mqtt_topic, mqtt_payload);
       client.publish(mqtt_topic, mqtt_payload, false, 0);
