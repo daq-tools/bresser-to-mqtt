@@ -122,10 +122,10 @@
 #define WIFI_RETRIES    10      // WiFi connection retries
 #define WIFI_DELAY      1000    // Delay between connection attempts [ms]
 #define SLEEP_EN        true    // enable sleep mode (see notes above!)
-#define USE_SECUREWIFI          // use secure WIFI
-//#define USE_WIFI              // use non-secure WIFI
-
- 
+//#define USE_SECUREWIFI          // use secure WIFI
+#define USE_WIFI              // use non-secure WIFI
+#define PYCOM_LOPY
+#define USE_SX127X
 // Enable to debug MQTT connection; will generate synthetic sensor data.
 //#define _DEBUG_MQTT_
 
