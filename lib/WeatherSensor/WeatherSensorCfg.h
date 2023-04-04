@@ -70,15 +70,20 @@
 //
 // This define (not very specific...) is set by selecting "FireBeetle-ESP32" in the Arduino IDE:
 //#define ARDUINO_ESP32_DEV
+#define PYCOM_LOPY
 
 #if defined(ARDUINO_TTGO_LoRa32_V1)
     #pragma message("ARDUINO_TTGO_LoRa32_V1 defined; using on-board transceiver")
     #define USE_SX1276
     
 #elif defined(ARDUINO_ADAFRUIT_FEATHER_ESP32S2)
-    #pragma message("ARDUINO_ADAFRUIT_FEATHER_ESP32S2 defined; assuming RFM95W FeatherWing will be used"
+    #pragma message("ARDUINO_ADAFRUIT_FEATHER_ESP32S2 defined; assuming RFM95W FeatherWing will be used")
     #define USE_SX1276
     
+#elif defined(PYCOM_LOPY)
+    #pragma message("PYCOM_LOPY defined")
+    #define USE_SX1272
+
 #elif defined(ARDUINO_ESP32_DEV)
     #pragma message("Generic ESP32; assuming this is the LoRa_Node board (DFRobot Firebeetle32 + Adafruit RFM95W LoRa Radio)")
     #define LORAWAN_NODE
@@ -91,10 +96,6 @@
 // --- Radio Transceiver ---
 // ------------------------------------------------------------------------------------------------
 // Select type of receiver module (if not yet defined based on the assumptions above)
-#if ( !defined(USE_CC1101) && !defined(USE_SX1276) )
-    //#define USE_CC1101
-    #define USE_SX1276
-#endif
 
 
 // ------------------------------------------------------------------------------------------------
@@ -195,11 +196,13 @@
     #define RECEIVER_CHIP "[CC1101]"
 #elif defined(USE_SX1276)
     #define RECEIVER_CHIP "[SX1276]"
+#elif defined(USE_SX1272)
+    #define RECEIVER_CHIP "[SX1272]"
 #else
     #error "Either USE_CC1101 or USE_SX1276 must be defined!"
 #endif
 
-
+# define PYCOM_LOPY
 // Arduino default SPI pins
 //
 // Board   SCK   MOSI  MISO
@@ -245,6 +248,20 @@
     // RFM95W/SX127x - GPIOxx / CC1101 - RADIOLIB_NC
     #define PIN_RECEIVER_RST  9
 
+#elif defined(PYCOM_LOPY)
+    // Generic pinning for ESP32 development boards
+    #define PIN_RECEIVER_CS 17
+
+    // CC1101: GDO0 / RFM95W/SX127x: G0
+    #define PIN_RECEIVER_IRQ 23
+
+    // CC1101: GDO2 / RFM95W/SX127x: G19
+    #define PIN_RECEIVER_GPIO 23
+
+    // RFM95W/SX127x - GPIOxx / CC1101 - RADIOLIB_NC
+    #define PIN_RECEIVER_RST 18
+
+
 #elif defined(ESP32)
     // Generic pinning for ESP32 development boards
     #define PIN_RECEIVER_CS   27
@@ -276,5 +293,6 @@
 #define STR(x) STR_HELPER(x)
 #pragma message("Receiver chip: " RECEIVER_CHIP)
 #pragma message("Pin config: RST->" STR(PIN_RECEIVER_RST) ", CS->" STR(PIN_RECEIVER_CS) ", GD0/G0/IRQ->" STR(PIN_RECEIVER_IRQ) ", GDO2/G1/GPIO->" STR(PIN_RECEIVER_GPIO) )
+#pragma message("Pin config: RST->" PIN_RECEIVER_RST", CS->" PIN_RECEIVER_CS", GD0/G0/IRQ->" PIN_RECEIVER_IRQ", GDO2/G1/GPIO->" PIN_RECEIVER_GPIO )
 
 #endif

@@ -67,6 +67,9 @@
 #if defined(USE_SX1276)
     static SX1276 radio = new Module(PIN_RECEIVER_CS, PIN_RECEIVER_IRQ, PIN_RECEIVER_RST, PIN_RECEIVER_GPIO);
 #endif
+#if defined(USE_SX1272)
+    static SX1272 radio = new Module(PIN_RECEIVER_CS, PIN_RECEIVER_IRQ, PIN_RECEIVER_RST, PIN_RECEIVER_GPIO);
+#endif
 
 
 // List of sensor IDs to be excluded - can be empty
